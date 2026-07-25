@@ -45,7 +45,6 @@ export class OpenWrtClient {
     }
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   async executeCommand(command: string): Promise<string> {
     if (!this.conn) throw new Error("Not connected")
 
@@ -68,23 +67,19 @@ export class OpenWrtClient {
   }
 
   async getMetrics(): Promise<RouterMetrics> {
-    const [cpu, memory, flash, clients, temp, , lanTraffic] = await Promise.all(
-      [
-        this.executeCommand("cat /proc/stat | head -1 && top -bn1 | head -5"),
-        this.executeCommand("free | grep Mem"),
+    const [cpu, memory, flash, clients, temp, lanTraffic] =
+      await Promise.all([
+        this.executeCommand("top -bn1 | grep 'CPU:'"),
+        this.executeCommand("free | grep 'Mem:'"),
         this.executeCommand("df -h / | tail -1"),
         this.executeCommand("cat /tmp/dhcp.leases | wc -l"),
         this.executeCommand(
           "cat /sys/class/thermal/thermal_zone*/temp 2>/dev/null || echo 0"
         ),
         this.executeCommand(
-          "cat /proc/net/dev | grep eth0 || cat /proc/net/dev | head -3"
-        ),
-        this.executeCommand(
           "cat /proc/net/dev | grep br-lan || cat /proc/net/dev | tail -n +3 | head -3"
         ),
-      ]
-    )
+      ])
 
     return {
       routerId: 0,
@@ -110,7 +105,7 @@ export class OpenWrtClient {
   }
 
   private parseCpuUsage(output: string): number {
-    const match = output.match(/(\d+\.?\d*)\s*id/)
+    const match = output.match(/(\d+\.?\d*)\s*%\s*idle/)
     if (match) {
       return 100 - parseFloat(match[1])
     }
@@ -129,12 +124,32 @@ export class OpenWrtClient {
 
   private parseFlashUsage(output: string): number {
     const parts = output.split(/\s+/)
-    if (parts.length >= 5) {
-      const used = parseInt(parts[2])
-      const total = parseInt(parts[1])
+    for (let i = parts.length - 1; i >= 0; i--) {
+      if (parts[i].endsWith("%")) {
+        return parseFloat(parts[i])
+      }
+    }
+    if (parts.length >= 4) {
+      const total = this.parseHumanSize(parts[1])
+      const used = this.parseHumanSize(parts[2])
       return total > 0 ? (used / total) * 100 : 0
     }
     return 0
+  }
+
+  private parseHumanSize(value: string): number {
+    const match = value.match(/^([\d.]+)\s*([KMGT])?[IB]?$/i)
+    if (!match) return parseFloat(value) || 0
+    const num = parseFloat(match[1])
+    const suffix = (match[2] || "").toUpperCase()
+    const multipliers: Record<string, number> = {
+      "": 1,
+      K: 1024,
+      M: 1024 * 1024,
+      G: 1024 * 1024 * 1024,
+      T: 1024 * 1024 * 1024 * 1024,
+    }
+    return num * (multipliers[suffix] || 1)
   }
 
   private parseTemperature(output: string): number {
