@@ -90,7 +90,7 @@ export function Sidebar() {
               <Separator />
               <div className="p-4">
                 <p className="text-xs text-muted-foreground">
-                  v0.0.1 • Local Network Monitor
+                  v0.1.0 • Local Network Monitor
                 </p>
               </div>
             </div>
