@@ -1,0 +1,16 @@
+services:
+  router-monitor:
+    image: tfrubel/wifi-router-uptime-monitor:v0.1.0
+    container_name: router-monitor
+    ports:
+      - "3003:3000"
+    volumes:
+      - router-monitor-data:/app/data
+    environment:
+      - DB_PATH=/app/data/monitor.db
+      - NEXT_TELEMETRY_DISABLED=1
+    restart: unless-stopped
+    network_mode: bridge
+
+volumes:
+  router-monitor-data:

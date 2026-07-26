@@ -1,0 +1,21 @@
+name: Router Monitor
+description: WiFi Router Uptime Monitor
+version: 0.1.0
+categories:
+  - Network
+  - Monitoring
+  - Tools
+webui: http://[HOST]:[PORT:3000]
+ports:
+  - 3000/tcp
+volumes:
+  - name: router-monitor-data
+    mount: /app/data
+    description: Database and persistent data
+env:
+  - name: DB_PATH
+    description: Database file path
+    default: /app/data/monitor.db
+  - name: NEXT_TELEMETRY_DISABLED
+    description: Disable Next.js telemetry
+    default: "1"
